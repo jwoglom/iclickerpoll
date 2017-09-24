@@ -156,6 +156,10 @@ class IClickerBase(object):
             except USBError:
                 pass
 
+    def _generate_welcome_seq(self, welcome_msg):
+        """ Generate a sequence of bytes for a welcome message on the iClicker device """
+        return ' '.join([hex(74 + ord(i))[2:] for i in welcome_msg])
+
     def read(self, timeout=100):
         try:
             return Command(self._read(timeout))
@@ -213,7 +217,7 @@ class IClickerBase(object):
 
     #TODO: There are still a lot of unknowns here...right now
     # it just repeates what was snooped from USB on Windows
-    def initialize(self, freq1='a', freq2='a'):
+    def initialize(self, freq1='a', freq2='a', welcome_msg='WELCOME'):
         COMMAND_SEQUENCE_A = [
             Command("01 2a 21 41 05"),
             Command("01 12"),
@@ -222,7 +226,7 @@ class IClickerBase(object):
             ]
         
         COMMAND_SEQUENCE_B = [
-            Command("01 29 a1 8f 96 8d 99 97 8f"),
+            Command("01 29 "+self._generate_welcome_seq(welcome_msg)),
             Command("01 17 04"),
             Command("01 17 03"),
             Command("01 16"),
@@ -463,6 +467,8 @@ if __name__ == '__main__':
                         help='Sets the file to save polling data to.')
     parser.add_argument('--frequency', type=str, default='aa',
                         help='Sets the two base-station frequency codes. Should be formatted as two letters (e.g., \'aa\' or \'ab\')')
+    parser.add_argument('--welcome-msg', type=str, default=None,
+                        help='Sets the welcome message on iClicker devices, truncated to 8 characters. Default is "WELCOME"')
 
     args = parser.parse_args()
 
@@ -483,7 +489,10 @@ if __name__ == '__main__':
         freq2 = args.frequency[1].lower()
         if freq1 not in ('a', 'b', 'c', 'd') or freq2 not in ('a', 'b', 'c', 'd'):
             raise ValueError("Frequency combintation '{0}{1}' is not valid".format(freq1, freq2))
-    
+
+    welcome_msg = None
+    if args.welcome_msg:
+        welcome_msg = args.welcome_msg
 
     #
     # Initiate the polling
@@ -492,7 +501,7 @@ if __name__ == '__main__':
     base = IClickerBase()
     base.get_base()
     print('Initializing iClicker Base')
-    base.initialize(freq1, freq2)
+    base.initialize(freq1, freq2, welcome_msg)
         
     # If we have successfully started a poll, set up a signal handler
     # to clean up when we get a SIGINT (ctrl+c or kill) command
