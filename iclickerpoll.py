@@ -145,6 +145,7 @@ class IClickerBase(object):
         response = self._read(timeout=timeout)
         if response != expected_response:
             raise IOError("Attempted syncronuous write of {0} and got {1} (expecting {2})".format(data.__repr__(), response.__repr__(), expected_response.__repr__()))
+
     def _write_command_sequence(self, seq):
         """ Write a sequence of commands to the usb device and read all the responses """
         for cmd in seq:
@@ -168,11 +169,15 @@ class IClickerBase(object):
 
             if self.device is None:
                 raise ValueError('Error: no iclicker device found')
-            
-            if self.device.is_kernel_driver_active(0):
-                log.warning("The iClicker seems to be in use by another device--Forcing reattach.")
-                self.device.detach_kernel_driver(0)
-        
+
+            try:
+                if self.device.is_kernel_driver_active(0):
+                    log.warning("The iClicker seems to be in use by another device--Forcing reattach.")
+                    self.device.detach_kernel_driver(0)
+            except NotImplementedError:
+                log.warning("Bypassed NotImplementedError for is_kernel_driver_active")
+                pass
+
             self.device.set_configuration()
 
     def set_base_frequency(self, code1='a', code2='a'):
